@@ -1,0 +1,16 @@
+{
+    "configurations": [
+        {
+            "name": "myConfigurationName",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [],
+            "compilerPath": "/home/yechan/projects/helloworld.c",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "IntelliSenseMode": "msvc-x64"
+        }
+    ],
+    "version": 4
+}

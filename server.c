@@ -11,6 +11,8 @@
 
 #define BUF_LEN 128
 
+void char_change(char *msg);
+
 int main(int argc, char *argv[]) {
     int server_fd, client_fd;
     struct sockaddr_in server_addr, client_addr;
@@ -73,3 +75,4 @@ int main(int argc, char *argv[]) {
     close(server_fd);
     return 0;
 }
+

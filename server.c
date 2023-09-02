@@ -1,45 +1,75 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
-#define PORT 55000
+#define BUF_LEN 128
 
-int main() {
-    int server_socket;
-    int client_socket;
-    struct sockaddr_in server_address;
-    struct sockaddr_in client_address;
-    socklen_t client_address_size; // 변경된 부분
-    char toClient[] = "Hello Client\n";
-    char fromClient[100];
+int main(int argc, char *argv[]) {
+    int server_fd, client_fd;
+    struct sockaddr_in server_addr, client_addr;
+    int len, msg_size;
+    char buf[BUF_LEN + 1];
 
-    server_socket = socket(PF_INET, SOCK_STREAM, 0);
-    printf("Server Socket Created!!\n");
-    memset(&server_address, 0, sizeof(server_address));
+    if (argc != 2) {
+        printf("Usage: %s port\n", argv[0]);
+        exit(0);
+    }
 
-    server_address.sin_family = AF_INET;
-    server_address.sin_addr.s_addr = htonl(INADDR_ANY);
-    server_address.sin_port = htons(PORT);
+    if ((server_fd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
+        printf("Server: Can't open stream socket.");
+        exit(0);
+    }
 
-    bind(server_socket, (struct sockaddr*)&server_address, sizeof(server_address));
-    listen(server_socket, 5);
-    printf("Waiting for Clients...\n");
-    
-    client_address_size = sizeof(client_address); // 초기화 추가
-    
-    client_socket = accept(server_socket, (struct sockaddr*)&client_address, &client_address_size);
-    printf("Client Connected!\n");
+    bzero((char *)&server_addr, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    server_addr.sin_port = htons(atoi(argv[1]));
 
-    read(client_socket, fromClient, sizeof(fromClient));
-    printf("From Client Message: %s\n", fromClient);
-    write(client_socket, toClient, sizeof(toClient));
-    printf("To Client Message: %s\n", toClient);
+    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        printf("Server: Can't bind local address.\n");
+        exit(0);
+    }
 
-    close(client_socket);
-    close(server_socket);
+    listen(server_fd, 5);
+    printf("Server: Waiting for connections...\n");
+
+    len = sizeof(client_addr);
+    client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &len);
+
+    if (client_fd < 0) {
+        printf("Server: Accept failed.\n");
+        exit(0);
+    }
+
+    printf("Server: Connection established.\n");
+
+    while (1) {
+        msg_size = recv(client_fd, buf, sizeof(buf), 0);
+        if (msg_size <= 0) {
+            printf("Server: Connection closed by client.\n");
+            break;
+        }
+        buf[msg_size] = '\0';
+        printf("Client: %s", buf);
+
+        printf("Server: Enter your message (or 'q' to quit): ");
+        fgets(buf, sizeof(buf), stdin);
+        send(client_fd, buf, strlen(buf), 0);
+        
+        if (strcmp(buf, "q\n") == 0) {
+            printf("Server: Closing connection.\n");
+            break;
+        }
+    }
+
+    close(client_fd);
+    close(server_fd);
     return 0;
 }
